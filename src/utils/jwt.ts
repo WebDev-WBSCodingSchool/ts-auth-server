@@ -7,6 +7,8 @@ import {
   REFRESH_TOKEN_TTL,
   JWT_ISSUER
 } from '#config';
+import { RefreshToken } from '#models';
+import type { UserType } from '#models/User';
 
 type token = string;
 type sessionId = string;
@@ -38,4 +40,28 @@ export const signJWT = (
   });
 
   return [token, session, jwtid];
+};
+
+export const createTokens = async (
+  user: UserType,
+  service: string | undefined
+): Promise<[string, string]> => {
+  const [refreshToken, sessionId, jti] = signJWT({}, user._id.toString(), service, 'refresh');
+
+  const refreshTokenEntry = await RefreshToken.create({
+    token: refreshToken,
+    userId: user._id,
+    sessionId,
+    jti
+  });
+
+  const [accessToken] = signJWT(
+    { roles: user.roles },
+    user._id.toString(),
+    service,
+    'access',
+    sessionId
+  );
+
+  return [refreshToken, accessToken];
 };
