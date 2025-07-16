@@ -1,8 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { RefreshToken, User } from '#models';
-import type { UserType } from '#models/User';
-import { REFRESH_JWT_SECRET, SALT_ROUNDS } from '#config';
+import { RefreshToken, TokenBlacklist, User } from '#models';
+import { ACCESS_JWT_SECRET, REFRESH_JWT_SECRET, SALT_ROUNDS } from '#config';
 import { createTokens } from '#utils';
 import type { RequestHandler } from 'express';
 import type { z } from 'zod/v4';
@@ -11,13 +10,17 @@ import type { registerSchema, loginSchema } from '#schemas';
 type RegisterDTO = z.infer<typeof registerSchema>;
 type LoginDTO = z.infer<typeof loginSchema>;
 type RefreshTokenDTO = {
-  refreshToken: string;
+  refreshToken?: string;
+  accessToken?: string;
 };
 
 type LogoutDTO = RefreshTokenDTO;
+type ValidateTokenDTO = {
+  accessToken?: string;
+};
 
 type SuccessResponseBody = {
-  token: string;
+  accessToken: string;
   refreshToken?: string;
   message?: string;
 };
@@ -38,7 +41,7 @@ export const register: RequestHandler<unknown, SuccessResponseBody, RegisterDTO>
 
   const [refreshToken, accessToken] = await createTokens(user, service);
 
-  res.status(201).json({ message: 'Registered', token: accessToken, refreshToken });
+  res.status(201).json({ message: 'Registered', accessToken, refreshToken });
 };
 
 export const login: RequestHandler<unknown, SuccessResponseBody, LoginDTO> = async (req, res) => {
@@ -52,7 +55,7 @@ export const login: RequestHandler<unknown, SuccessResponseBody, LoginDTO> = asy
 
   const [refreshToken, accessToken] = await createTokens(user, service);
 
-  res.status(200).json({ message: 'Logged in', token: accessToken, refreshToken });
+  res.status(200).json({ message: 'Logged in', accessToken, refreshToken });
 };
 
 export const refresh: RequestHandler<unknown, SuccessResponseBody, RefreshTokenDTO> = async (
@@ -91,11 +94,11 @@ export const refresh: RequestHandler<unknown, SuccessResponseBody, RefreshTokenD
 
   res
     .status(200)
-    .json({ message: 'Refreshed', token: newAccessToken, refreshToken: newRefreshToken });
+    .json({ message: 'Refreshed', accessToken: newAccessToken, refreshToken: newRefreshToken });
 };
 
 export const logout: RequestHandler<unknown, { message: string }, LogoutDTO> = async (req, res) => {
-  const { refreshToken } = req.body;
+  const { refreshToken, accessToken } = req.body;
 
   if (refreshToken) {
     try {
@@ -108,5 +111,62 @@ export const logout: RequestHandler<unknown, { message: string }, LogoutDTO> = a
     }
   }
 
+  if (accessToken) {
+    try {
+      const decoded = jwt.verify(accessToken, ACCESS_JWT_SECRET) as jwt.JwtPayload;
+
+      if (decoded.jti && decoded.exp) {
+        const expireAt = new Date(decoded.exp * 1000);
+        await TokenBlacklist.create({
+          jti: decoded.jti,
+          userId: decoded.sub,
+          expireAt
+        });
+      }
+    } catch (error) {
+      // The token is invalid anyway. We can ignore the error.
+    }
+  }
+
   res.status(200).json({ message: 'Successfully logged out' });
+};
+
+export const validateToken: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (
+  req,
+  res,
+  next
+) => {
+  const { accessToken } = req.body;
+  if (!accessToken) throw new Error('Access token is required.', { cause: { status: 401 } });
+
+  try {
+    const decoded = jwt.verify(accessToken, ACCESS_JWT_SECRET) as jwt.JwtPayload;
+    if (!decoded.jti) throw new Error();
+    const isOnBlacklist = await TokenBlacklist.exists({ jti: decoded.jti });
+    if (isOnBlacklist) throw new Error();
+  } catch (error) {
+    next(new Error('Invalid or expired refresh token.', { cause: { status: 403 } }));
+  }
+
+  res.status(200).json({ message: 'Valid token' });
+};
+
+export const me: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (req, res, next) => {
+  const { accessToken } = req.body;
+  if (!accessToken) throw new Error('Access token is required.', { cause: { status: 401 } });
+
+  try {
+    const decoded = jwt.verify(accessToken, ACCESS_JWT_SECRET) as jwt.JwtPayload;
+    if (!decoded.jti || !decoded.sub)
+      throw new Error('Invalid or expired refresh token.', { cause: { status: 403 } });
+    const isOnBlacklist = await TokenBlacklist.exists({ jti: decoded.jti });
+    if (isOnBlacklist)
+      throw new Error('Invalid or expired refresh token.', { cause: { status: 403 } });
+    const user = await User.findById(decoded.sub).select('-password');
+    if (!user) new Error('User not found', { cause: { status: 404 } });
+
+    res.status(200).json({ message: 'Valid token', user });
+  } catch (error) {
+    next(error);
+  }
 };
