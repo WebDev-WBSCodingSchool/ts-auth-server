@@ -158,10 +158,10 @@ export const me: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (req
   try {
     const decoded = jwt.verify(accessToken, ACCESS_JWT_SECRET) as jwt.JwtPayload;
     if (!decoded.jti || !decoded.sub)
-      throw new Error('Invalid or expired refresh token.', { cause: { status: 403 } });
+      throw new Error('Invalid or expired access token.', { cause: { status: 403 } });
     const isOnBlacklist = await TokenBlacklist.exists({ jti: decoded.jti });
     if (isOnBlacklist)
-      throw new Error('Invalid or expired refresh token.', { cause: { status: 403 } });
+      throw new Error('Invalid or expired access token.', { cause: { status: 403 } });
     const user = await User.findById(decoded.sub).select('-password');
     if (!user) throw new Error('User not found', { cause: { status: 404 } });
 
