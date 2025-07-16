@@ -163,7 +163,7 @@ export const me: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (req
     if (isOnBlacklist)
       throw new Error('Invalid or expired refresh token.', { cause: { status: 403 } });
     const user = await User.findById(decoded.sub).select('-password');
-    if (!user) new Error('User not found', { cause: { status: 404 } });
+    if (!user) throw new Error('User not found', { cause: { status: 404 } });
 
     res.status(200).json({ message: 'Valid token', user });
   } catch (error) {
