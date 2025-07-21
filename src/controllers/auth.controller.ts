@@ -145,7 +145,15 @@ export const validateToken: RequestHandler<unknown, unknown, ValidateTokenDTO> =
     const isOnBlacklist = await TokenBlacklist.exists({ jti: decoded.jti });
     if (isOnBlacklist) throw new Error();
   } catch (error) {
-    next(new Error('Invalid or expired refresh token.', { cause: { status: 403 } }));
+    if (
+      error &&
+      typeof error === 'object' &&
+      'name' in error &&
+      (error as { name?: string }).name === 'TokenExpiredError'
+    ) {
+      return next(new Error('Expired access token', { cause: { status: 401 } }));
+    }
+    return next(new Error('Invalid access token.', { cause: { status: 401 } }));
   }
 
   res.status(200).json({ message: 'Valid token' });
