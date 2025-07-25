@@ -22,7 +22,6 @@ const refreshTokenSchema = new Schema(
 refreshTokenSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
 
 refreshTokenSchema.index({ userId: 1 });
-refreshTokenSchema.index({ jti: 1 });
 
 const RefreshToken = model('RefreshToken', refreshTokenSchema);
 
