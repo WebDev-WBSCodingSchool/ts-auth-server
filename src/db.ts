@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
-const MONGO_URI = process.env.MONGO_URI || '';
+import { MONGO_URI, DB_NAME } from '#config';
 
 try {
-  await mongoose.connect(MONGO_URI, { dbName: 'auth' });
-  console.log('✅ Connected to MongoDB');
+  const client = await mongoose.connect(MONGO_URI, { dbName: DB_NAME });
+  console.log('✅ Connected to MongoDB: ' + client.connection.name);
 } catch (err) {
   console.error('❌ MongoDB connection error:', err);
   process.exit(1);

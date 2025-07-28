@@ -1,7 +1,14 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import type { Response } from 'express';
 import { RefreshToken, TokenBlacklist, User } from '#models';
-import { ACCESS_JWT_SECRET, REFRESH_JWT_SECRET, SALT_ROUNDS } from '#config';
+import {
+  ACCESS_JWT_SECRET,
+  ACCESS_TOKEN_TTL,
+  REFRESH_JWT_SECRET,
+  REFRESH_TOKEN_TTL,
+  SALT_ROUNDS
+} from '#config';
 import { createTokens } from '#utils';
 import type { RequestHandler } from 'express';
 import type { z } from 'zod/v4';
@@ -25,6 +32,22 @@ type SuccessResponseBody = {
   message?: string;
 };
 
+const setAuthCookie = (res: Response, key: 'access-token' | 'refresh-token', token: string) => {
+  const secure = !['development', 'test'].includes(process.env.NODE_ENV ?? ''); // "production", "development", "test"
+
+  // const tokenTTL = (key === 'access-token' ? ACCESS_TOKEN_TTL : REFRESH_TOKEN_TTL) * 1000;
+
+  // const expiryDate = new Date(Date.now() + tokenTTL);
+
+  res.cookie(key, token, {
+    httpOnly: true,
+    // sameSite: 'lax',
+    sameSite: 'none',
+    secure
+    // expires: expiryDate
+  });
+};
+
 export const register: RequestHandler<unknown, SuccessResponseBody, RegisterDTO> = async (
   req,
   res
@@ -41,6 +64,9 @@ export const register: RequestHandler<unknown, SuccessResponseBody, RegisterDTO>
 
   const [refreshToken, accessToken] = await createTokens(user, service);
 
+  setAuthCookie(res, 'refresh-token', refreshToken);
+  setAuthCookie(res, 'access-token', accessToken);
+
   res.status(201).json({ message: 'Registered', accessToken, refreshToken });
 };
 
@@ -55,6 +81,9 @@ export const login: RequestHandler<unknown, SuccessResponseBody, LoginDTO> = asy
 
   const [refreshToken, accessToken] = await createTokens(user, service);
 
+  setAuthCookie(res, 'access-token', accessToken);
+  setAuthCookie(res, 'refresh-token', refreshToken);
+
   res.status(200).json({ message: 'Logged in', accessToken, refreshToken });
 };
 
@@ -62,7 +91,7 @@ export const refresh: RequestHandler<unknown, SuccessResponseBody, RefreshTokenD
   req,
   res
 ) => {
-  const { refreshToken } = req.body;
+  const { 'refresh-token': refreshToken } = req.cookies;
   if (!refreshToken) throw new Error('Refresh token is required.', { cause: { status: 401 } });
 
   let decoded: jwt.JwtPayload;
@@ -92,13 +121,16 @@ export const refresh: RequestHandler<unknown, SuccessResponseBody, RefreshTokenD
 
   const [newRefreshToken, newAccessToken] = await createTokens(user, decoded.aud as string);
 
+  setAuthCookie(res, 'access-token', newAccessToken);
+  setAuthCookie(res, 'refresh-token', newRefreshToken);
+
   res
     .status(200)
     .json({ message: 'Refreshed', accessToken: newAccessToken, refreshToken: newRefreshToken });
 };
 
 export const logout: RequestHandler<unknown, { message: string }, LogoutDTO> = async (req, res) => {
-  const { refreshToken, accessToken } = req.body;
+  const { 'refresh-token': refreshToken, 'access-token': accessToken } = req.cookies;
 
   if (refreshToken) {
     try {
@@ -127,6 +159,8 @@ export const logout: RequestHandler<unknown, { message: string }, LogoutDTO> = a
       // The token is invalid anyway. We can ignore the error.
     }
   }
+  res.clearCookie('access-token');
+  res.clearCookie('refresh-token');
 
   res.status(200).json({ message: 'Successfully logged out' });
 };
@@ -136,7 +170,7 @@ export const validateToken: RequestHandler<unknown, unknown, ValidateTokenDTO> =
   res,
   next
 ) => {
-  const { accessToken } = req.body;
+  const { 'access-token': accessToken } = req.cookies;
   if (!accessToken) throw new Error('Access token is required.', { cause: { status: 401 } });
 
   try {
@@ -145,13 +179,10 @@ export const validateToken: RequestHandler<unknown, unknown, ValidateTokenDTO> =
     const isOnBlacklist = await TokenBlacklist.exists({ jti: decoded.jti });
     if (isOnBlacklist) throw new Error();
   } catch (error) {
-    if (
-      error &&
-      typeof error === 'object' &&
-      'name' in error &&
-      (error as { name?: string }).name === 'TokenExpiredError'
-    ) {
-      return next(new Error('Expired access token', { cause: { status: 401 } }));
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(
+        new Error('Expired access token', { cause: { status: 401, code: 'ACCESS_TOKEN_EXPIRED' } })
+      );
     }
     return next(new Error('Invalid access token.', { cause: { status: 401 } }));
   }
@@ -160,7 +191,7 @@ export const validateToken: RequestHandler<unknown, unknown, ValidateTokenDTO> =
 };
 
 export const me: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (req, res, next) => {
-  const { accessToken } = req.body;
+  const { 'access-token': accessToken } = req.cookies;
   if (!accessToken) throw new Error('Access token is required.', { cause: { status: 401 } });
 
   try {
@@ -175,6 +206,11 @@ export const me: RequestHandler<unknown, unknown, ValidateTokenDTO> = async (req
 
     res.status(200).json({ message: 'Valid token', user });
   } catch (error) {
-    next(error);
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(
+        new Error('Expired access token', { cause: { status: 401, code: 'ACCESS_TOKEN_EXPIRED' } })
+      );
+    }
+    return next(new Error('Invalid access token.', { cause: { status: 401 } }));
   }
 };
