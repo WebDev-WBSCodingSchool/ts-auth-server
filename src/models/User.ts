@@ -11,21 +11,9 @@ export type UserType = {
 
 const userSchema = new Schema<UserType>(
   {
-    firstName: { type: String, required: [true, 'Firstname is required'] },
-    lastName: { type: String, required: [true, 'Lastname is required'] },
-    email: {
-      type: String,
-      require: true,
-      unique: true
-    },
-    password: {
-      type: String,
-      require: true
-    },
-    roles: {
-      type: [String],
-      default: ['user']
-    }
+    // TODO: create a mongoose schema for storing user data
+    // Add firstName, lastName, email, password and a string array for roles
+    // make sure that the email is unique and the password hashed before saving
   },
   {
     timestamps: { createdAt: true, updatedAt: false }

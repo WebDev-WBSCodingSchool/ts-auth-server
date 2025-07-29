@@ -3,25 +3,15 @@ import { REFRESH_TOKEN_TTL } from '#config';
 
 const refreshTokenSchema = new Schema(
   {
-    token: { type: String, required: true, unique: true },
-    userId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
-    jti: { type: String, required: true, unique: true },
-    sessionId: { type: String, required: true },
-    deviceInfo: String,
-    expireAt: {
-      type: Date,
-      default: new Date(Date.now() + REFRESH_TOKEN_TTL * 1000) // in milliseconds
-    }
+    // TODO: create a mongoose schema for storing refresh tokens
+    // this should include at least the token itself, the token's id (jti) and expireAt
+    // expireAt: https://mongoosejs.com/docs/api/schemadateoptions.html#SchemaDateOptions.prototype.expires
+    // You can also store additional information like the userId or device info in more elaborate cases
   },
   {
     timestamps: { createdAt: true, updatedAt: false }
   }
 );
-
-// Creates a TTL (Time-To-Live) Index. Document will be removed automatically after <REFRESH_TOKEN_TTL> seconds.
-refreshTokenSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
-
-refreshTokenSchema.index({ userId: 1 });
 
 const RefreshToken = model('RefreshToken', refreshTokenSchema);
 
