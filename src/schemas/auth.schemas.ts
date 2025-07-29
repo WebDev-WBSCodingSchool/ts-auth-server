@@ -21,13 +21,15 @@ export const registerSchema = z
         .regex(/[!@#$%^&*()_+\-=\[\]{}|;:'",.<>/?`~]/, {
           error: 'Password must include at least one special character'
         }),
-      passwordConfirmation: z.string(),
+      confirmPassword: z.string(),
+      firstName: z.string().min(1).max(50).optional(),
+      lastName: z.string().min(1).max(50).optional(),
       service: serviceSchema
     },
     { error: 'Please provide a valid email and a secure password.' }
   )
   .strict()
-  .refine(data => data.password === data.passwordConfirmation, { error: "Passwords don't match" });
+  .refine(data => data.password === data.confirmPassword, { error: "Passwords don't match" });
 
 export const loginSchema = z.object({
   email: emailSchema,

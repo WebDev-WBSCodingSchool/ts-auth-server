@@ -10,7 +10,7 @@ const refreshTokenSchema = new Schema(
     deviceInfo: String,
     expireAt: {
       type: Date,
-      default: new Date(Date.now() + REFRESH_TOKEN_TTL)
+      default: new Date(Date.now() + REFRESH_TOKEN_TTL * 1000) // in milliseconds
     }
   },
   {

@@ -1,7 +1,9 @@
 import { z } from 'zod/v4';
 
 const envSchema = z.object({
-  REFRESH_TOKEN_TTL: z.coerce.number().default(30 * 24 * 60 * 60), // 30 days
+  MONGO_URI: z.url({ protocol: /mongodb/ }),
+  DB_NAME: z.string(),
+  REFRESH_TOKEN_TTL: z.coerce.number().default(30 * 24 * 60 * 60), // 30 days in seconds
   ACCESS_TOKEN_TTL: z.coerce.number().default(15 * 60), // 15 minutes
   SALT_ROUNDS: z.coerce.number().default(13),
 
@@ -15,7 +17,8 @@ const envSchema = z.object({
       error: 'REFRESH_JWT_SECRET is required and must be at least 64 characters long'
     })
     .min(64),
-  JWT_ISSUER: z.string().default('https://www.wbscodingschool.com/')
+  JWT_ISSUER: z.string().default('https://www.wbscodingschool.com/'),
+  CLIENT_BASE_URL: z.url().default('http://localhost:5173')
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -26,10 +29,13 @@ if (!parsedEnv.success) {
 }
 
 export const {
+  MONGO_URI,
+  DB_NAME,
   REFRESH_TOKEN_TTL,
   ACCESS_TOKEN_TTL,
   SALT_ROUNDS,
   ACCESS_JWT_SECRET,
   REFRESH_JWT_SECRET,
-  JWT_ISSUER
+  JWT_ISSUER,
+  CLIENT_BASE_URL
 } = parsedEnv.data;

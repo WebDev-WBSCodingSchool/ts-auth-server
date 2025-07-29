@@ -15,6 +15,6 @@ authRouter.delete('/logout', logout);
 
 authRouter.post('/validate', validateToken);
 
-authRouter.post('/me', me);
+authRouter.get('/me', me);
 
 export default authRouter;
