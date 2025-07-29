@@ -17,7 +17,8 @@ const envSchema = z.object({
       error: 'REFRESH_JWT_SECRET is required and must be at least 64 characters long'
     })
     .min(64),
-  JWT_ISSUER: z.string().default('https://www.wbscodingschool.com/')
+  JWT_ISSUER: z.string().default('https://www.wbscodingschool.com/'),
+  CLIENT_BASE_URL: z.url().default('http://localhost:5173')
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -35,5 +36,6 @@ export const {
   SALT_ROUNDS,
   ACCESS_JWT_SECRET,
   REFRESH_JWT_SECRET,
-  JWT_ISSUER
+  JWT_ISSUER,
+  CLIENT_BASE_URL
 } = parsedEnv.data;

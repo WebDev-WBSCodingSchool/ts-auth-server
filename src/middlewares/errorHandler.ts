@@ -11,7 +11,11 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     const payload: ErrorPayload = { message: err.message };
     if (err.cause) {
       const cause = err.cause as { status: number; code?: string };
-      if (cause.code) payload.code = cause.code;
+      if (cause.code === 'ACCESS_TOKEN_EXPIRED')
+        res.setHeader(
+          'WWW-Authenticate',
+          'Bearer error="token_expired", error_description="The access token expired"'
+        );
       res.status(cause.status ?? 500).json(payload);
       return;
     }

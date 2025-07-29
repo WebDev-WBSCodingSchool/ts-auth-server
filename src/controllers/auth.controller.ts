@@ -34,17 +34,10 @@ type SuccessResponseBody = {
 
 const setAuthCookie = (res: Response, key: 'access-token' | 'refresh-token', token: string) => {
   const secure = !['development', 'test'].includes(process.env.NODE_ENV ?? ''); // "production", "development", "test"
-
-  // const tokenTTL = (key === 'access-token' ? ACCESS_TOKEN_TTL : REFRESH_TOKEN_TTL) * 1000;
-
-  // const expiryDate = new Date(Date.now() + tokenTTL);
-
   res.cookie(key, token, {
     httpOnly: true,
-    // sameSite: 'lax',
     sameSite: 'none',
     secure
-    // expires: expiryDate
   });
 };
 
@@ -52,7 +45,7 @@ export const register: RequestHandler<unknown, SuccessResponseBody, RegisterDTO>
   req,
   res
 ) => {
-  const { email, password, service } = req.body;
+  const { email, password, firstName, lastName, service } = req.body;
 
   const userExists = await User.exists({ email });
   if (userExists) throw new Error('Email already exists', { cause: { status: 409 } });
@@ -60,7 +53,7 @@ export const register: RequestHandler<unknown, SuccessResponseBody, RegisterDTO>
   const salt = await bcrypt.genSalt(SALT_ROUNDS);
   const hashedPW = await bcrypt.hash(password, salt);
 
-  const user = await User.create({ email, password: hashedPW });
+  const user = await User.create({ email, password: hashedPW, firstName, lastName });
 
   const [refreshToken, accessToken] = await createTokens(user, service);
 
@@ -91,6 +84,7 @@ export const refresh: RequestHandler<unknown, SuccessResponseBody, RefreshTokenD
   req,
   res
 ) => {
+  console.log(req.cookies);
   const { 'refresh-token': refreshToken } = req.cookies;
   if (!refreshToken) throw new Error('Refresh token is required.', { cause: { status: 401 } });
 
