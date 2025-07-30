@@ -40,6 +40,8 @@ In our implementation, we've separated concerns into two distinct microservices:
 
 This separation provides better scalability, maintainability, and security by isolating authentication logic from business logic.
 
+![architecture](./architecture.png)
+
 ### And how to implement it?
 
 The implementation of an authentication system is a fullstack project, involving actions and tasks across multiple services and the client. We are not here to lie to you, authentication is a very delicate feature that can grow a lot in terms of complexity. The goal of these lectures is that you understand the basics of these interactions so then you can either go deeper or step out and implement authentication with a third-party library! For our implementation, we can break the entire project into three components:
@@ -88,10 +90,14 @@ Authentication in the frontend is just [smoke and mirrors](https://dictionary.ca
   - Rejection from authenticated routes
 - Login persistence: if the user returns to the page and the refresh token is still valid, automatically sign them in
 
+![frontend to auth server](./frontend_to_auth-server.png)
+
 **Subsequent requests**
 
 - On any subsequent request to the Travel Journal API that needs authentication, we will attach the access token
 - Handle token expiration by automatically refreshing tokens when needed
+
+![frontend to data server](./frontend_to_data-server.png)
 
 ### Implementation details
 
@@ -165,12 +171,14 @@ const authenticate: RequestHandler = (req, _res, next) => {
     if (!decoded.jti || !decoded.sub) throw new Error();
     const user = {
       id: decoded.sub,
-      roles: decoded.roles,
+      roles: decoded.roles
     };
     req.user = user;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      return next(new Error('Expired access token', { cause: { status: 401, code: 'ACCESS_TOKEN_EXPIRED' } }));
+      return next(
+        new Error('Expired access token', { cause: { status: 401, code: 'ACCESS_TOKEN_EXPIRED' } })
+      );
     }
     return next(new Error('Invalid access token.', { cause: { status: 401 } }));
   }
@@ -198,7 +206,10 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     if (err.cause) {
       const cause = err.cause as { status: number; code?: string };
       if (cause.code === 'ACCESS_TOKEN_EXPIRED')
-        res.setHeader('WWW-Authenticate', 'Bearer error="token_expired", error_description="The access token expired"');
+        res.setHeader(
+          'WWW-Authenticate',
+          'Bearer error="token_expired", error_description="The access token expired"'
+        );
       res.status(cause.status ?? 500).json(payload);
       return;
     }
