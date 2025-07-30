@@ -18,14 +18,14 @@ For our specific use case, we will use something called **JWT**. **JWT** or **JS
 This is an example of a JWT:
 
 ```bash
-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EiLCJhZG1pbiI6dHJ1ZSwiaWF0IjoxNzUzODgyMjYxLCJleHAiOjE3NTM4ODU4NjF9.PIwC44zYVxDj9fiCgRSMViea_r3wKpTJV2EfXaz17rA
+eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EiLCJhZG1pbiI6dHJ1ZSwiaWF0Ijo1NTQzNDI0MDAsImV4cCI6MjE0NzQ4MzY0OH0.9fxoLqai3mJRpM5N2PkPl_jrdpwvBSq8wAvZ0pk8txY
 ```
 
 Where:
 
 - **eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9** is the header
-- **eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EiLCJhZG1pbiI6dHJ1ZSwiaWF0IjoxNzUzODgyMjYxLCJleHAiOjE3NTM4ODU4NjF9** is the payload
-- **PIwC44zYVxDj9fiCgRSMViea_r3wKpTJV2EfXaz17rA** is the signature
+- **eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL3dhdGNoP3Y9ZFF3NHc5V2dYY1EiLCJhZG1pbiI6dHJ1ZSwiaWF0Ijo1NTQzNDI0MDAsImV4cCI6MjE0NzQ4MzY0OH0** is the payload
+- **9fxoLqai3mJRpM5N2PkPl_jrdpwvBSq8wAvZ0pk8txY** is the signature
 
 You can verify and inspect the payload of any JWT here https://jwt.io/ **.** It's important to know that what makes a token secure is the signature bit, as only a party that knows the **secret** you used to sign the token, can verify it.
 
