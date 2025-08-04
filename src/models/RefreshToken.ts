@@ -5,9 +5,6 @@ const refreshTokenSchema = new Schema(
   {
     token: { type: String, required: true, unique: true },
     userId: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
-    jti: { type: String, required: true, unique: true },
-    sessionId: { type: String, required: true },
-    deviceInfo: String,
     expireAt: {
       type: Date,
       default: new Date(Date.now() + REFRESH_TOKEN_TTL * 1000) // in milliseconds

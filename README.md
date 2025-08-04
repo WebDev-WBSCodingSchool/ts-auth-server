@@ -4,7 +4,7 @@ This project you're supposed to build a standalone authentication microservice u
 
 ## Project Goal
 
-Your task is to build the core features of this authentication service. You will be provided with a basic project scaffold containing the initial Express and TypeScript setup. You will need to implement the routes, controllers, models, and middleware to create a fully functional authentication system.
+Your task is to build the core features of this authentication service. You will be provided with a basic project scaffold containing the initial Express and TypeScript setup. You will need to implement the controllers, models, and middleware to create a fully functional authentication system.
 
 ## Core Requirements
 
@@ -13,7 +13,7 @@ Your task is to build the core features of this authentication service. You will
 You are expected to create and organize your code into the following directories. This separation of concerns is a key principle of building maintainable applications.
 
 - `src/controllers`: Contains the request handlers (controller functions) that implement the logic for each API endpoint.
-- `src/models`: Defines the Mongoose schemas for your database collections (`User`, `RefreshToken`, `TokenBlacklist`).
+- `src/models`: Defines the Mongoose schemas for your database collections (`User`, `RefreshToken`).
 - `src/middlewares`: Holds custom middleware functions, such as for error handling, 404 errors, and request validation.
 - `src/routes`: Defines the API routes and maps them to the corresponding controller functions.
 - `src/schemas`: Contains Zod schemas for validating the request bodies of incoming requests.
@@ -22,36 +22,27 @@ You are expected to create and organize your code into the following directories
 
 ### 2. Database Models
 
-You will need to define three Mongoose models:
+You will need to define these Mongoose models:
 
 - **User**:
-  - `firstName`: `String`
-  - `lastName`: `String`
-  - `email`: `String`, unique and required.
-  - `password`: `String`, required.
-  - `roles`: `Array` of `String`, with a default value of `['user']`.
+  - derive the Mongoose model from the zod registerSchema
+  - don't include confirmPassword
+  - add `roles`: `Array` of `String`, with a default value of `['user']`.
 - **RefreshToken**:
-  - Stores refresh tokens to allow users to obtain new access tokens without logging in again.
-  - Should have a `userId` to link it to a user.
-  - Should include a `jti` (JWT ID) for unique identification.
+  - `token`: store the opaque token string
   - Implement a TTL (Time-To-Live) index so that expired tokens are automatically removed from the database.
-- **TokenBlacklist**:
-  - Stores the `jti` of access tokens that have been invalidated (e.g., on logout).
-  - This prevents logged-out users from using their old access tokens.
-  - Also needs a TTL index to automatically clear expired token entries.
 
 ### 3. API Endpoints
 
-You must implement the following API endpoints under the `/api/auth` route:
+You must implement the following API endpoints under the `/auth` route:
 
-| Method | Endpoint    | Description                                                                                                             |
-| :----- | :---------- | :---------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/register` | Creates a new user. Hashes the password before saving. Returns an access token and a refresh token.                     |
-| `POST` | `/login`    | Authenticates a user. If credentials are correct, returns a new access and refresh token.                               |
-| `POST` | `/refresh`  | Takes a valid refresh token (sent via cookies) and returns a new access token and a new refresh token (token rotation). |
-| `POST` | `/logout`   | Invalidates both the access and refresh tokens. The access token's `jti` should be added to the blacklist.              |
-| `GET`  | `/me`       | Returns the user profile for the currently authenticated user, based on the access token.                               |
-| `POST` | `/validate` | Checks if the provided access token is valid (i.e., not expired and not on the blacklist).                              |
+| Method   | Endpoint    | Description                                                                                                             |
+| :------- | :---------- | :---------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/register` | Creates a new user. Hashes the password before saving. Returns an access token and a refresh token.                     |
+| `POST`   | `/login`    | Authenticates a user. If credentials are correct, returns a new access and refresh token.                               |
+| `POST`   | `/refresh`  | Takes a valid refresh token (sent via cookies) and returns a new access token and a new refresh token (token rotation). |
+| `DELETE` | `/logout`   | Invalidates both the access and refresh tokens.                                                                         |
+| `GET`    | `/me`       | Returns the user profile for the currently authenticated user, based on the access token.                               |
 
 ### 4. Authentication Logic
 
@@ -64,13 +55,6 @@ You must implement the following API endpoints under the `/api/auth` route:
 ### 5. Validation
 
 - Use the `zod` library to validate the body of incoming requests for the `/register` and `/login` endpoints.
-- **Registration**:
-  - `email`: Must be a valid email format.
-  - `password`: Must be at least 12 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.
-  - `confirmPassword`: Must match the `password`.
-- **Login**:
-  - `email`: Must be a valid email format.
-  - `password`: Must be a string.
 
 ### 6. Middleware
 
@@ -82,14 +66,14 @@ You must implement the following API endpoints under the `/api/auth` route:
 
 Your application should be configurable via environment variables. Create a `.env.development.local` file for local development with the following variables:
 
-- `PORT`: The port your server will run on.
-- `MONGO_URI`: The connection string for your MongoDB database.
 - `ACCESS_JWT_SECRET`: A secret key for signing access tokens.
-- `REFRESH_JWT_SECRET`: A secret key for signing refresh tokens.
-- `ACCESS_TOKEN_TTL`: The expiration time for access tokens (e.g., `900` -> 15 minutes).
+- `DB_NAME`: The db name in your mongo cluster that you share with your data API.
+- `CLIENT_BASE_URL`: The URL of your Frontend, needed for CORS.
+- `MONGO_URI`: The connection string for your MongoDB database.
 - `REFRESH_TOKEN_TTL`: The expiration time for refresh tokens (e.g., `2592000` -> 30 days).
-- `JWT_ISSUER`: The issuer name for your JWTs.
 - `SALT_ROUNDS`: The number of salt rounds for bcrypt.
+
+Have a look at `src/config/index.ts` to see an example of how you can use `zod` to enforce and safely coerce environment variables.
 
 ## Getting Started
 
@@ -105,6 +89,4 @@ Your application should be configurable via environment variables. Create a `.en
     npm run dev
     ```
 
-This will start the server with hot-reloading, so your changes will be automatically applied as you work.
-
-Good luck!
+Have fun!
